@@ -29,7 +29,7 @@ export interface AppState {
   updateAssociation: (id: string, association: Partial<Association>) => void;
   deleteElement: (id: string) => void;
   setSelectedElement: (id: string | null) => void;
-  updateEdgeCardinality: (edgeId: string, cardinality: string) => void;
+  updateEdgeRole: (edgeId: string, roleUpdate: Partial<AssociationRole>) => void;
   loadProject: (data: any) => void;
 }
 
@@ -53,7 +53,6 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   onConnect: (connection: Connection) => {
-    // Only allow connection between Entity and Association
     const sourceNode = get().nodes.find(n => n.id === connection.source);
     const targetNode = get().nodes.find(n => n.id === connection.target);
 
@@ -62,15 +61,29 @@ export const useStore = create<AppState>((set, get) => ({
     const sourceIsEntity = sourceNode.type === 'entityNode';
     const targetIsEntity = targetNode.type === 'entityNode';
 
+    // Entity to Entity connection = Inheritance
+    if (sourceIsEntity && targetIsEntity) {
+      const edgeId = `inh-${sourceNode.id}-${targetNode.id}`;
+      if (get().edges.some(e => e.id === edgeId)) return;
+
+      const newEdge: Edge = {
+        id: edgeId,
+        source: connection.source,
+        target: connection.target,
+        type: 'inheritanceEdge',
+      };
+      set({ edges: addEdge(newEdge, get().edges) });
+      return;
+    }
+
     if (sourceIsEntity === targetIsEntity) {
-      // Cannot connect entity to entity or assoc to assoc directly in basic Merise
+      // Cannot connect assoc to assoc
       return;
     }
 
     const entityId = sourceIsEntity ? sourceNode.id : targetNode.id;
     const assocId = sourceIsEntity ? targetNode.id : sourceNode.id;
     
-    // Check if relation already exists
     const exists = get().edges.some(e => 
       (e.source === sourceNode.id && e.target === targetNode.id) ||
       (e.source === targetNode.id && e.target === sourceNode.id)
@@ -78,21 +91,19 @@ export const useStore = create<AppState>((set, get) => ({
 
     if (exists) return;
 
-    // Default cardinality
     const newEdge: Edge = {
       id: `e-${sourceNode.id}-${targetNode.id}`,
       source: connection.source,
       target: connection.target,
       label: '0,n',
       type: 'customEdge',
-      data: { cardinality: '0,n' }
+      data: { cardinality: '0,n', isRelative: false }
     };
 
     set({
       edges: addEdge(newEdge, get().edges),
     });
     
-    // Also update association roles
     const assoc = get().associations[assocId];
     if (assoc) {
       set({
@@ -100,7 +111,7 @@ export const useStore = create<AppState>((set, get) => ({
           ...get().associations,
           [assocId]: {
             ...assoc,
-            roles: [...assoc.roles, { entityId, cardinality: '0,n' }]
+            roles: [...assoc.roles, { entityId, cardinality: '0,n', isRelative: false }]
           }
         }
       });
@@ -178,16 +189,23 @@ export const useStore = create<AppState>((set, get) => ({
     set({ selectedElementId: id });
   },
 
-  updateEdgeCardinality: (edgeId, cardinality) => {
+  updateEdgeRole: (edgeId, roleUpdate) => {
     set(state => {
       const edge = state.edges.find(e => e.id === edgeId);
       if (!edge) return state;
 
+      const newData = { ...edge.data, ...roleUpdate };
+      
+      // Compute new label
+      let label = (newData.cardinality || edge.label) as string;
+      if (newData.isRelative) {
+        label = `(${label})`;
+      }
+
       const newEdges = state.edges.map(e => 
-        e.id === edgeId ? { ...e, label: cardinality, data: { ...e.data, cardinality } } : e
+        e.id === edgeId ? { ...e, label, data: newData } : e
       );
 
-      // We also need to update the association role
       const sourceNode = state.nodes.find(n => n.id === edge.source);
       const targetNode = state.nodes.find(n => n.id === edge.target);
       
@@ -199,7 +217,7 @@ export const useStore = create<AppState>((set, get) => ({
         const assoc = state.associations[assocId];
         if (assoc) {
           const newRoles = assoc.roles.map(r => 
-            r.entityId === entityId ? { ...r, cardinality: cardinality as any } : r
+            r.entityId === entityId ? { ...r, ...roleUpdate } : r
           );
           
           const newAssoc = { ...assoc, roles: newRoles };

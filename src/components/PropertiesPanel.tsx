@@ -11,21 +11,26 @@ export const PropertiesPanel = () => {
     edges,
     updateEntity,
     updateAssociation,
-    updateEdgeCardinality,
+    updateEdgeRole,
     deleteElement
   } = useStore();
 
   const [localName, setLocalName] = useState('');
   const [localCard, setLocalCard] = useState('');
+  const [localRelative, setLocalRelative] = useState(false);
 
   const entity = selectedElementId ? entities[selectedElementId] : null;
   const association = selectedElementId ? associations[selectedElementId] : null;
-  const edge = selectedElementId && selectedElementId.startsWith('e-') ? edges.find(e => e.id === selectedElementId) : null;
+  const edge = selectedElementId ? edges.find(e => e.id === selectedElementId) : null;
+  const isInheritance = edge?.type === 'inheritanceEdge';
 
   useEffect(() => {
     if (entity) setLocalName(entity.name);
     else if (association) setLocalName(association.name);
-    else if (edge) setLocalCard(edge.data?.cardinality as string || '0,n');
+    else if (edge) {
+      setLocalCard(edge.data?.cardinality as string || '0,n');
+      setLocalRelative(edge.data?.isRelative || false);
+    }
   }, [selectedElementId, entity, association, edge]);
 
   if (!selectedElementId) {
@@ -44,6 +49,16 @@ export const PropertiesPanel = () => {
   const handleNameBlur = () => {
     if (entity) updateEntity(entity.id, { name: localName });
     if (association) updateAssociation(association.id, { name: localName });
+  };
+
+  const handleCardChange = (card: string) => {
+    setLocalCard(card);
+    updateEdgeRole(selectedElementId, { cardinality: card as any });
+  };
+
+  const handleRelativeChange = (relative: boolean) => {
+    setLocalRelative(relative);
+    updateEdgeRole(selectedElementId, { isRelative: relative });
   };
 
   const addAttribute = (targetId: string, type: 'entity' | 'association') => {
@@ -155,22 +170,42 @@ export const PropertiesPanel = () => {
       {entity && renderAttributes(entity.attributes, 'entity')}
       {association && renderAttributes(association.attributes || [], 'association')}
 
-      {edge && (
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-semibold">Cardinalité</label>
-          <select 
-            value={localCard}
-            onChange={(e) => {
-              setLocalCard(e.target.value);
-              updateEdgeCardinality(selectedElementId, e.target.value);
-            }}
-            className="border p-2 rounded"
-          >
-            <option value="0,1">0,1</option>
-            <option value="1,1">1,1</option>
-            <option value="0,n">0,n</option>
-            <option value="1,n">1,n</option>
-          </select>
+      {edge && !isInheritance && (
+        <div className="flex flex-col gap-4 mt-4 border-t pt-4">
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-semibold">Cardinalité</label>
+            <select 
+              value={localCard}
+              onChange={(e) => handleCardChange(e.target.value)}
+              className="border p-2 rounded"
+            >
+              <option value="0,1">0,1</option>
+              <option value="1,1">1,1</option>
+              <option value="0,n">0,n</option>
+              <option value="1,n">1,n</option>
+            </select>
+          </div>
+          
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input 
+              type="checkbox" 
+              checked={localRelative}
+              onChange={(e) => handleRelativeChange(e.target.checked)}
+              className="rounded text-blue-600"
+            />
+            <span className="font-semibold">Identifiant relatif (R)</span>
+          </label>
+        </div>
+      )}
+
+      {isInheritance && (
+        <div className="mt-4 border-t pt-4">
+          <p className="text-sm text-blue-600 font-semibold bg-blue-50 p-2 rounded border border-blue-100">
+            Lien d'héritage (Spécialisation)
+          </p>
+          <p className="text-xs text-gray-500 mt-2">
+            L'entité source hérite des attributs de l'entité cible (parent).
+          </p>
         </div>
       )}
     </div>

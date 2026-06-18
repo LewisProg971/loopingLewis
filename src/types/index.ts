@@ -20,6 +20,7 @@ export interface AssociationRole {
   entityId: string;
   cardinality: Cardinality;
   roleName?: string;
+  isRelative?: boolean;
 }
 
 export interface Association {

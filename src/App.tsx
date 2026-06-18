@@ -4,9 +4,11 @@ import { useStore } from './store/useStore';
 import { EntityNode } from './components/EntityNode';
 import { AssociationNode } from './components/AssociationNode';
 import { CustomEdge } from './components/CustomEdge';
+import { InheritanceEdge } from './components/InheritanceEdge';
 import { Toolbar } from './components/Toolbar';
 import { PropertiesPanel } from './components/PropertiesPanel';
 import { MLDPanel } from './components/MLDPanel';
+import { ValidatorPanel } from './components/ValidatorPanel';
 import { generateMLD } from './utils/mldGenerator';
 import { generateSQL } from './utils/sqlGenerator';
 import { parseSQL } from './utils/sqlParser';
@@ -21,6 +23,7 @@ const nodeTypes = {
 
 const edgeTypes = {
   customEdge: CustomEdge,
+  inheritanceEdge: InheritanceEdge,
 };
 
 function FlowApp() {
@@ -166,6 +169,7 @@ function FlowApp() {
         {showMLD && <MLDPanel onClose={() => setShowMLD(false)} />}
         <PropertiesPanel />
       </div>
+      <ValidatorPanel />
     </div>
   );
 }
