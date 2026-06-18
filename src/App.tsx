@@ -77,7 +77,7 @@ function FlowApp() {
 
   const handleExportSQL = async (dialect: SqlDialect) => {
     try {
-      const tables = generateMLD(entities, associations);
+      const tables = generateMLD(entities, associations, edges);
       const sql = generateSQL(tables, dialect);
       
       const filePath = await save({

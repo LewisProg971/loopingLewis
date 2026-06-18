@@ -4,11 +4,11 @@ import { generateMLD } from '../utils/mldGenerator';
 import { X } from 'lucide-react';
 
 export const MLDPanel = ({ onClose }: { onClose: () => void }) => {
-  const { entities, associations } = useStore();
+  const { entities, associations, edges } = useStore();
 
   const mldTables = useMemo(() => {
-    return generateMLD(entities, associations);
-  }, [entities, associations]);
+    return generateMLD(entities, associations, edges);
+  }, [entities, associations, edges]);
 
   return (
     <div className="w-80 bg-indigo-50 border-l border-indigo-200 p-4 flex flex-col h-full overflow-y-auto">

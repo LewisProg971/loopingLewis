@@ -1,6 +1,11 @@
-import { Entity, Association, Table, TableColumn, DataType } from '../types';
+import { Entity, Association, Table, TableColumn, DataType, AssociationRole } from '../types';
+import { Edge } from '@xyflow/react';
 
-export const generateMLD = (entities: Record<string, Entity>, associations: Record<string, Association>): Table[] => {
+export const generateMLD = (
+  entities: Record<string, Entity>, 
+  associations: Record<string, Association>,
+  edges: Edge[] = []
+): Table[] => {
   const tables: Table[] = [];
   const entityIdToTableName: Record<string, string> = {};
 
@@ -23,13 +28,43 @@ export const generateMLD = (entities: Record<string, Entity>, associations: Reco
     });
   });
 
-  // 2. Process associations
+  // 2. Process Inheritance
+  edges.forEach(edge => {
+    if (edge.type === 'inheritanceEdge') {
+      const childId = edge.source;
+      const parentId = edge.target;
+      const childTable = tables.find(t => t.name === entityIdToTableName[childId]);
+      const parentEntity = entities[parentId];
+
+      if (childTable && parentEntity) {
+        const parentPk = parentEntity.attributes.find(a => a.isPrimaryKey);
+        if (parentPk) {
+          // In Merise, child PK is often the parent PK (PK + FK)
+          // Let's check if child already has a PK. If so, parent PK becomes just an FK.
+          // Standard: Child PK = Parent PK.
+          const existingPk = childTable.columns.find(c => c.isPrimaryKey);
+          
+          childTable.columns.push({
+            name: `${entityIdToTableName[parentId]}_${parentPk.name.toLowerCase()}`,
+            type: mapType(parentPk.type),
+            isPrimaryKey: !existingPk, // If no PK yet, this is it
+            isForeignKey: true,
+            references: {
+              table: entityIdToTableName[parentId],
+              column: parentPk.name.toLowerCase(),
+              onDelete: 'CASCADE'
+            },
+            notNull: true
+          });
+        }
+      }
+    }
+  });
+
+  // 3. Process associations
   Object.values(associations).forEach(assoc => {
-    // Determine the type of association based on cardinalities
     const roles = assoc.roles;
     if (roles.length !== 2) {
-      // Basic implementation: only handle binary associations for MLD/SQL generation
-      // Or if it's n-ary, it always becomes a table. Let's assume binary mostly, or force n-ary to table.
       if (roles.length > 2) {
         createJoinTable(assoc, tables, entities, entityIdToTableName);
       }
@@ -44,21 +79,16 @@ export const generateMLD = (entities: Record<string, Entity>, associations: Reco
     const isMany2 = c2.endsWith('n');
 
     if (isMany1 && isMany2) {
-      // Many-to-Many -> Join table
       createJoinTable(assoc, tables, entities, entityIdToTableName);
     } else if (!isMany1 && isMany2) {
-      // One-to-Many
-      addForeignKey(role1.entityId, role2.entityId, c1, tables, entities, entityIdToTableName);
+      addForeignKey(role1, role2.entityId, tables, entities, entityIdToTableName);
     } else if (isMany1 && !isMany2) {
-      // Many-to-One
-      addForeignKey(role2.entityId, role1.entityId, c2, tables, entities, entityIdToTableName);
+      addForeignKey(role2, role1.entityId, tables, entities, entityIdToTableName);
     } else {
-      // One-to-One
-      // Add foreign key to the one with 0,1 if exists, otherwise either one.
       if (c1 === '0,1') {
-        addForeignKey(role2.entityId, role1.entityId, c2, tables, entities, entityIdToTableName);
+        addForeignKey(role2, role1.entityId, tables, entities, entityIdToTableName);
       } else {
-        addForeignKey(role1.entityId, role2.entityId, c1, tables, entities, entityIdToTableName);
+        addForeignKey(role1, role2.entityId, tables, entities, entityIdToTableName);
       }
     }
   });
@@ -82,7 +112,6 @@ const createJoinTable = (assoc: Association, tables: Table[], entities: Record<s
   const tableName = assoc.name.replace(/\s+/g, '_').toLowerCase();
   const columns: TableColumn[] = [];
 
-  // Add primary keys of all connected entities as foreign/primary keys
   assoc.roles.forEach(role => {
     const entity = entities[role.entityId];
     if (!entity) return;
@@ -105,7 +134,6 @@ const createJoinTable = (assoc: Association, tables: Table[], entities: Record<s
     }
   });
 
-  // Add association attributes
   assoc.attributes.forEach(attr => {
     columns.push({
       name: attr.name.toLowerCase(),
@@ -120,17 +148,13 @@ const createJoinTable = (assoc: Association, tables: Table[], entities: Record<s
 };
 
 const addForeignKey = (
-  sourceEntityId: string, // The entity that gets the FK (the "1" side gets the FK in MLD for 1:N? Wait. In 1:N, the table representing the "N" side receives the FK from the "1" side. 
-  // Let's re-verify Merise: Entity A (0,1) ----- Assoc ----- (0,n) Entity B. 
-  // Entity A gets the foreign key of Entity B.
-  // Wait, no. A (0,n) --- (1,1) B => B gets FK of A. The side with max cardinality 1 receives the FK.
+  sourceRole: AssociationRole, // The role receiving the FK
   targetEntityId: string, // The entity providing its PK
-  sourceCardinality: string, // Cardinality of the side receiving FK
   tables: Table[],
   entities: Record<string, Entity>,
   entityMap: Record<string, string>
 ) => {
-  const sourceTable = tables.find(t => t.name === entityMap[sourceEntityId]);
+  const sourceTable = tables.find(t => t.name === entityMap[sourceRole.entityId]);
   const targetEntity = entities[targetEntityId];
   if (!sourceTable || !targetEntity) return;
 
@@ -142,14 +166,13 @@ const addForeignKey = (
   sourceTable.columns.push({
     name: `${targetTableName}_${targetPk.name.toLowerCase()}`,
     type: mapType(targetPk.type),
-    isPrimaryKey: false,
+    isPrimaryKey: sourceRole.isRelative || false, // IF RELATIVE, IT'S PART OF PK
     isForeignKey: true,
     references: {
       table: targetTableName,
       column: targetPk.name.toLowerCase(),
       onDelete: 'RESTRICT'
     },
-    // If cardinality is 1,1 it's not null. If 0,1 it can be null.
-    notNull: sourceCardinality === '1,1'
+    notNull: sourceRole.cardinality === '1,1' || sourceRole.isRelative
   });
 };

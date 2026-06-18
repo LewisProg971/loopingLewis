@@ -11,6 +11,7 @@ import {
   OnConnect,
   applyNodeChanges,
   applyEdgeChanges,
+  MarkerType,
 } from '@xyflow/react';
 import { Entity, Association, AssociationRole } from '../types';
 
@@ -90,7 +91,7 @@ export interface AppState {
         ...assoc, 
         id: newId, 
         name: `${assoc.name}_copie`,
-        roles: [], // Don't copy roles/edges to avoid mess
+        roles: [],
         attributes: (assoc.attributes || []).map(a => ({ ...a, id: `attr_${Date.now()}_${Math.random()}` }))
       };
       get().addAssociation(newAssoc, newPos);
@@ -128,6 +129,10 @@ export interface AppState {
         source: connection.source,
         target: connection.target,
         type: 'inheritanceEdge',
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: '#1f2937',
+        },
       };
       set({ edges: addEdge(newEdge, get().edges) });
       return;
