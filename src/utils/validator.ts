@@ -1,4 +1,4 @@
-import { Entity, Association, AssociationRole } from '../types';
+import { Entity, Association } from '../types';
 import { Edge } from '@xyflow/react';
 
 export interface ValidationMessage {

@@ -34,9 +34,9 @@ export interface AppState {
   duplicateSelectedElement: () => void;
   autoLayout: () => void;
   loadProject: (data: any) => void;
-  }
+}
 
-  export const useStore = create<AppState>((set, get) => ({
+export const useStore = create<AppState>((set, get) => ({
   nodes: [],
   edges: [],
   entities: {},
@@ -45,7 +45,6 @@ export interface AppState {
 
   autoLayout: () => {
     const { nodes } = get();
-    // Simple grid layout to keep it clean
     const SPACING_X = 250;
     const SPACING_Y = 180;
     const COLUMNS = Math.ceil(Math.sqrt(nodes.length));
@@ -119,7 +118,6 @@ export interface AppState {
     const sourceIsEntity = sourceNode.type === 'entityNode';
     const targetIsEntity = targetNode.type === 'entityNode';
 
-    // Entity to Entity connection = Inheritance
     if (sourceIsEntity && targetIsEntity) {
       const edgeId = `inh-${sourceNode.id}-${targetNode.id}`;
       if (get().edges.some(e => e.id === edgeId)) return;
@@ -138,10 +136,7 @@ export interface AppState {
       return;
     }
 
-    if (sourceIsEntity === targetIsEntity) {
-      // Cannot connect assoc to assoc
-      return;
-    }
+    if (sourceIsEntity === targetIsEntity) return;
 
     const entityId = sourceIsEntity ? sourceNode.id : targetNode.id;
     const assocId = sourceIsEntity ? targetNode.id : sourceNode.id;
@@ -162,9 +157,7 @@ export interface AppState {
       data: { cardinality: '0,n', isRelative: false }
     };
 
-    set({
-      edges: addEdge(newEdge, get().edges),
-    });
+    set({ edges: addEdge(newEdge, get().edges) });
     
     const assoc = get().associations[assocId];
     if (assoc) {
@@ -257,8 +250,6 @@ export interface AppState {
       if (!edge) return state;
 
       const newData = { ...edge.data, ...roleUpdate };
-      
-      // Compute new label
       let label = (newData.cardinality || edge.label) as string;
       if (newData.isRelative) {
         label = `(${label})`;
@@ -281,9 +272,7 @@ export interface AppState {
           const newRoles = assoc.roles.map(r => 
             r.entityId === entityId ? { ...r, ...roleUpdate } : r
           );
-          
           const newAssoc = { ...assoc, roles: newRoles };
-          
           return {
             edges: newEdges,
             associations: { ...state.associations, [assocId]: newAssoc },
@@ -293,7 +282,6 @@ export interface AppState {
           };
         }
       }
-
       return { edges: newEdges };
     });
   },

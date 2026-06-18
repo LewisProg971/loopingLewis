@@ -1,4 +1,3 @@
-import React from 'react';
 import { BaseEdge, EdgeProps, getStraightPath, EdgeLabelRenderer } from '@xyflow/react';
 import { useStore } from '../store/useStore';
 

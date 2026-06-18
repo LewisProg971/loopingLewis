@@ -173,6 +173,6 @@ const addForeignKey = (
       column: targetPk.name.toLowerCase(),
       onDelete: 'RESTRICT'
     },
-    notNull: sourceRole.cardinality === '1,1' || sourceRole.isRelative
+    notNull: Boolean(sourceRole.cardinality === '1,1' || sourceRole.isRelative)
   });
 };

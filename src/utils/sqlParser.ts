@@ -1,4 +1,4 @@
-import { Entity, Association, Attribute, DataType, AssociationRole } from '../types';
+import { Entity, Association, Attribute } from '../types';
 
 export const parseSQL = (sql: string) => {
   const entities: Record<string, Entity> = {};

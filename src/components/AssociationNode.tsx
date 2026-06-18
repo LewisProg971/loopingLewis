@@ -1,9 +1,10 @@
-import React from 'react';
-import { Handle, Position, NodeProps } from '@xyflow/react';
-import { Association } from '../types';
+import { Handle, Position, NodeProps, Node } from '@xyflow/react';
 import { useStore } from '../store/useStore';
+import { Association } from '../types';
 
-export const AssociationNode = ({ id, data }: NodeProps<{ association: Association }>) => {
+export type AssociationNodeType = Node<{ association: Association }, 'associationNode'>;
+
+export const AssociationNode = ({ id, data }: NodeProps<AssociationNodeType>) => {
   const selectedElementId = useStore(state => state.selectedElementId);
   const setSelectedElement = useStore(state => state.setSelectedElement);
   
@@ -12,28 +13,24 @@ export const AssociationNode = ({ id, data }: NodeProps<{ association: Associati
 
   return (
     <div 
-      className={`relative flex items-center justify-center cursor-pointer`}
+      className={`bg-orange-50 border-2 rounded-full shadow-sm min-w-[100px] min-h-[60px] flex items-center justify-center transition-colors px-6 py-3 ${isSelected ? 'border-blue-500 ring-2 ring-blue-200' : 'border-orange-400'}`}
       onClick={(e) => { e.stopPropagation(); setSelectedElement(id); }}
     >
-      {/* Ellipse shape for association in Merise */}
-      <div className={`
-        bg-orange-100 border-2 rounded-full flex flex-col items-center justify-center min-w-[120px] min-h-[60px] p-2 shadow-sm
-        ${isSelected ? 'border-blue-500' : 'border-orange-500'}
-      `}>
-        <span className="font-bold text-sm text-center">{assoc.name}</span>
+      <Handle type="target" position={Position.Top} className="opacity-0" />
+      <Handle type="source" position={Position.Bottom} className="opacity-0" />
+      <Handle type="target" position={Position.Left} className="opacity-0" />
+      <Handle type="source" position={Position.Right} className="opacity-0" />
+      
+      <div className="flex flex-col items-center">
+        <span className="font-bold text-orange-900 text-sm text-center">{assoc.name}</span>
         {assoc.attributes && assoc.attributes.length > 0 && (
-          <div className="text-xs text-gray-600 mt-1 flex flex-col items-center">
-            {assoc.attributes.map(attr => (
-               <span key={attr.id}>{attr.name}</span>
+          <div className="mt-1 text-[10px] text-orange-800 flex flex-col items-center">
+            {assoc.attributes.map((attr: any) => (
+              <span key={attr.id}>{attr.name}</span>
             ))}
           </div>
         )}
       </div>
-
-      <Handle type="target" position={Position.Top} className="w-2 h-2 opacity-0" id="top" />
-      <Handle type="source" position={Position.Bottom} className="w-2 h-2 opacity-0" id="bottom" />
-      <Handle type="target" position={Position.Left} className="w-2 h-2 opacity-0" id="left" />
-      <Handle type="source" position={Position.Right} className="w-2 h-2 opacity-0" id="right" />
     </div>
   );
 };

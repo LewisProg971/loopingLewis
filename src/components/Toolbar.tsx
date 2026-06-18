@@ -1,12 +1,14 @@
 import React from 'react';
-import { Square, Circle, Database, Code, Upload, Book, Wand2, Maximize } from 'lucide-react';
+import { Square, Circle, Database, Code, Upload, Book, Wand2, Maximize, Image as ImageIcon } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { Entity, Association, SqlDialect } from '../types';
+import { Entity, Association } from '../types';
+import { SqlDialect } from '../utils/sqlGenerator';
 
-interface ToolbarProps {
+export interface ToolbarProps {
   onExportSQL: (dialect: SqlDialect) => void;
   onImportSQL: () => void;
   onExportDictionary: () => void;
+  onExportImage: () => void;
   onFitView: () => void;
   showMLD: boolean;
   setShowMLD: (show: boolean) => void;
@@ -16,6 +18,7 @@ export const Toolbar = ({
   onExportSQL, 
   onImportSQL, 
   onExportDictionary,
+  onExportImage,
   onFitView,
   showMLD, 
   setShowMLD 
@@ -75,6 +78,13 @@ export const Toolbar = ({
           title="Zoomer sur tout"
         >
           <Maximize size={16} />
+        </button>
+        <button 
+          onClick={onExportImage}
+          className="p-2 bg-gray-50 text-gray-700 border border-gray-300 hover:bg-gray-100 rounded transition-colors"
+          title="Exporter en Image (PNG)"
+        >
+          <ImageIcon size={16} />
         </button>
       </div>
 

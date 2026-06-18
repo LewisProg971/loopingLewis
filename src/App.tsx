@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { ReactFlow, Background, Controls, MiniMap, ConnectionMode, ReactFlowProvider, useReactFlow } from '@xyflow/react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { ReactFlow, Background, Controls, MiniMap, ConnectionMode, ReactFlowProvider, useReactFlow, NodeTypes } from '@xyflow/react';
 import { useStore } from './store/useStore';
 import { EntityNode } from './components/EntityNode';
 import { AssociationNode } from './components/AssociationNode';
@@ -16,8 +16,9 @@ import { parseSQL } from './utils/sqlParser';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
 import { toPng } from 'html-to-image';
+import { getNodesBounds, getViewportForBounds } from '@xyflow/react';
 
-const nodeTypes = {
+const nodeTypes: NodeTypes = {
   entityNode: EntityNode,
   associationNode: AssociationNode,
 };
@@ -187,12 +188,48 @@ function FlowApp() {
     }
   };
 
+  const handleExportImage = async () => {
+    if (!reactFlowWrapper.current) return;
+    
+    try {
+      const nodesBounds = getNodesBounds(nodes);
+      const viewport = getViewportForBounds(nodesBounds, 1200, 800, 0.5, 2, 0.1);
+
+      const dataUrl = await toPng(reactFlowWrapper.current, {
+        backgroundColor: '#f3f4f6',
+        width: 1200,
+        height: 800,
+        style: {
+          width: '1200px',
+          height: '800px',
+          transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
+        },
+      });
+
+      const filePath = await save({
+        filters: [{
+          name: 'Image PNG',
+          extensions: ['png']
+        }]
+      });
+
+      if (filePath) {
+        await writeTextFile(filePath, dataUrl); 
+        alert('Image exportée avec succès !');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Erreur lors de l\'exportation de l\'image.');
+    }
+  };
+
   return (
     <div className="w-screen h-screen flex flex-col overflow-hidden bg-gray-100 text-gray-900 font-sans">
       <Toolbar 
         onExportSQL={handleExportSQL} 
         onImportSQL={handleImportSQL} 
         onExportDictionary={handleExportDictionary}
+        onExportImage={handleExportImage}
         onFitView={() => fitView({ duration: 800 })}
         showMLD={showMLD} 
         setShowMLD={setShowMLD} 

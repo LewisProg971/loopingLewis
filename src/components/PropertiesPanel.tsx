@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
-import { Attribute, DataType, Entity, Association } from '../types';
+import { Attribute, DataType } from '../types';
 import { Trash2, Plus } from 'lucide-react';
 
 export const PropertiesPanel = () => {
@@ -28,8 +28,8 @@ export const PropertiesPanel = () => {
     if (entity) setLocalName(entity.name);
     else if (association) setLocalName(association.name);
     else if (edge) {
-      setLocalCard(edge.data?.cardinality as string || '0,n');
-      setLocalRelative(edge.data?.isRelative || false);
+      setLocalCard((edge.data?.cardinality as string) || '0,n');
+      setLocalRelative(Boolean(edge.data?.isRelative));
     }
   }, [selectedElementId, entity, association, edge]);
 
@@ -53,15 +53,19 @@ export const PropertiesPanel = () => {
 
   const handleCardChange = (card: string) => {
     setLocalCard(card);
-    updateEdgeRole(selectedElementId, { cardinality: card as any });
+    if (selectedElementId) {
+      updateEdgeRole(selectedElementId, { cardinality: card as any });
+    }
   };
 
   const handleRelativeChange = (relative: boolean) => {
     setLocalRelative(relative);
-    updateEdgeRole(selectedElementId, { isRelative: relative });
+    if (selectedElementId) {
+      updateEdgeRole(selectedElementId, { isRelative: relative });
+    }
   };
 
-  const addAttribute = (targetId: string, type: 'entity' | 'association') => {
+  const addAttribute = (type: 'entity' | 'association') => {
     const newAttr: Attribute = {
       id: `attr_${Date.now()}`,
       name: 'nouvel_attribut',
@@ -76,7 +80,7 @@ export const PropertiesPanel = () => {
     }
   };
 
-  const updateAttribute = (targetId: string, type: 'entity' | 'association', attrId: string, changes: Partial<Attribute>) => {
+  const updateAttribute = (type: 'entity' | 'association', attrId: string, changes: Partial<Attribute>) => {
     if (type === 'entity' && entity) {
       const newAttrs = entity.attributes.map(a => a.id === attrId ? { ...a, ...changes } : a);
       updateEntity(entity.id, { attributes: newAttrs });
@@ -86,7 +90,7 @@ export const PropertiesPanel = () => {
     }
   };
 
-  const removeAttribute = (targetId: string, type: 'entity' | 'association', attrId: string) => {
+  const removeAttribute = (type: 'entity' | 'association', attrId: string) => {
     if (type === 'entity' && entity) {
       const newAttrs = entity.attributes.filter(a => a.id !== attrId);
       updateEntity(entity.id, { attributes: newAttrs });
@@ -100,7 +104,7 @@ export const PropertiesPanel = () => {
     <div className="mt-4 flex flex-col gap-2">
       <h3 className="font-semibold text-sm mb-1 flex justify-between items-center">
         Attributs
-        <button onClick={() => addAttribute(selectedElementId, parentType)} className="p-1 hover:bg-gray-200 rounded text-blue-600">
+        <button onClick={() => addAttribute(parentType)} className="p-1 hover:bg-gray-200 rounded text-blue-600">
           <Plus size={16} />
         </button>
       </h3>
@@ -110,17 +114,17 @@ export const PropertiesPanel = () => {
             <input 
               type="text" 
               value={attr.name}
-              onChange={(e) => updateAttribute(selectedElementId, parentType, attr.id, { name: e.target.value })}
+              onChange={(e) => updateAttribute(parentType, attr.id, { name: e.target.value })}
               className="border p-1 w-full"
             />
-            <button onClick={() => removeAttribute(selectedElementId, parentType, attr.id)} className="text-red-500">
+            <button onClick={() => removeAttribute(parentType, attr.id)} className="text-red-500">
               <Trash2 size={14} />
             </button>
           </div>
           <div className="flex gap-2 items-center">
             <select 
               value={attr.type}
-              onChange={(e) => updateAttribute(selectedElementId, parentType, attr.id, { type: e.target.value as DataType })}
+              onChange={(e) => updateAttribute(parentType, attr.id, { type: e.target.value as DataType })}
               className="border p-1 w-full"
             >
               <option value="INT">INT</option>
@@ -134,7 +138,7 @@ export const PropertiesPanel = () => {
               <input 
                 type="checkbox" 
                 checked={attr.isPrimaryKey}
-                onChange={(e) => updateAttribute(selectedElementId, parentType, attr.id, { isPrimaryKey: e.target.checked })}
+                onChange={(e) => updateAttribute(parentType, attr.id, { isPrimaryKey: e.target.checked })}
               />
               PK
             </label>
@@ -148,7 +152,7 @@ export const PropertiesPanel = () => {
     <div className="w-80 bg-gray-50 border-l border-gray-200 p-4 flex flex-col h-full overflow-y-auto">
       <div className="flex justify-between items-center mb-4">
         <h2 className="font-bold text-lg text-gray-700">Propriétés</h2>
-        <button onClick={() => deleteElement(selectedElementId)} className="text-red-500 p-1 hover:bg-red-50 rounded" title="Supprimer">
+        <button onClick={() => { if(selectedElementId) deleteElement(selectedElementId); }} className="text-red-500 p-1 hover:bg-red-50 rounded" title="Supprimer">
           <Trash2 size={18} />
         </button>
       </div>
