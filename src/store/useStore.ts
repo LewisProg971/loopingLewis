@@ -34,6 +34,13 @@ export interface AppState {
   duplicateSelectedElement: () => void;
   autoLayout: () => void;
   loadProject: (data: any) => void;
+  
+  // History
+  past: Pick<AppState, 'nodes' | 'edges' | 'entities' | 'associations'>[];
+  future: Pick<AppState, 'nodes' | 'edges' | 'entities' | 'associations'>[];
+  saveHistory: () => void;
+  undo: () => void;
+  redo: () => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -42,8 +49,49 @@ export const useStore = create<AppState>((set, get) => ({
   entities: {},
   associations: {},
   selectedElementId: null,
+  past: [],
+  future: [],
+
+  saveHistory: () => {
+    const { nodes, edges, entities, associations, past } = get();
+    set({
+      past: [...past, { nodes, edges, entities, associations }],
+      future: [],
+    });
+  },
+
+  undo: () => {
+    const { past, future, nodes, edges, entities, associations } = get();
+    if (past.length === 0) return;
+    
+    const previous = past[past.length - 1];
+    const newPast = past.slice(0, past.length - 1);
+    
+    set({
+      past: newPast,
+      future: [...future, { nodes, edges, entities, associations }],
+      ...previous,
+      selectedElementId: null
+    });
+  },
+
+  redo: () => {
+    const { past, future, nodes, edges, entities, associations } = get();
+    if (future.length === 0) return;
+
+    const next = future[future.length - 1];
+    const newFuture = future.slice(0, future.length - 1);
+
+    set({
+      past: [...past, { nodes, edges, entities, associations }],
+      future: newFuture,
+      ...next,
+      selectedElementId: null
+    });
+  },
 
   autoLayout: () => {
+    get().saveHistory();
     const { nodes } = get();
     const SPACING_X = 250;
     const SPACING_Y = 180;
@@ -64,6 +112,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   duplicateSelectedElement: () => {
+    get().saveHistory();
     const { selectedElementId, entities, associations, nodes } = get();
     if (!selectedElementId) return;
 
@@ -110,6 +159,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   onConnect: (connection: Connection) => {
+    get().saveHistory();
     const sourceNode = get().nodes.find(n => n.id === connection.source);
     const targetNode = get().nodes.find(n => n.id === connection.target);
 
@@ -174,6 +224,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   addEntity: (entity, position) => {
+    get().saveHistory();
     const newNode: Node = {
       id: entity.id,
       type: 'entityNode',
@@ -187,6 +238,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   addAssociation: (association, position) => {
+    get().saveHistory();
     const newNode: Node = {
       id: association.id,
       type: 'associationNode',
@@ -200,6 +252,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   updateEntity: (id, updatedFields) => {
+    get().saveHistory();
     set(state => {
       const entity = { ...state.entities[id], ...updatedFields };
       return {
@@ -212,6 +265,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   updateAssociation: (id, updatedFields) => {
+    get().saveHistory();
     set(state => {
       const assoc = { ...state.associations[id], ...updatedFields };
       return {
@@ -224,6 +278,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   deleteElement: (id) => {
+    get().saveHistory();
     set(state => {
       const newEntities = { ...state.entities };
       const newAssociations = { ...state.associations };
@@ -245,6 +300,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   updateEdgeRole: (edgeId, roleUpdate) => {
+    get().saveHistory();
     set(state => {
       const edge = state.edges.find(e => e.id === edgeId);
       if (!edge) return state;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Square, Circle, Database, Code, Upload, Book, Wand2, Maximize, Image as ImageIcon } from 'lucide-react';
+import { Square, Circle, Database, Code, Upload, Book, Wand2, Maximize, Image as ImageIcon, Save, FolderOpen } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { Entity, Association } from '../types';
 import { SqlDialect } from '../utils/sqlGenerator';
@@ -9,6 +9,8 @@ export interface ToolbarProps {
   onImportSQL: () => void;
   onExportDictionary: () => void;
   onExportImage: () => void;
+  onSaveProject: () => void;
+  onLoadProject: () => void;
   onFitView: () => void;
   showMLD: boolean;
   setShowMLD: (show: boolean) => void;
@@ -19,11 +21,13 @@ export const Toolbar = ({
   onImportSQL, 
   onExportDictionary,
   onExportImage,
+  onSaveProject,
+  onLoadProject,
   onFitView,
   showMLD, 
   setShowMLD 
 }: ToolbarProps) => {
-  const { addEntity, addAssociation, autoLayout } = useStore();
+  const { addEntity, addAssociation, autoLayout, undo, redo, past, future } = useStore();
   const [selectedDialect, setSelectedDialect] = React.useState<SqlDialect>('mysql');
 
   const handleAddEntity = () => {
@@ -61,6 +65,42 @@ export const Toolbar = ({
           className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 text-orange-700 hover:bg-orange-100 rounded text-sm font-medium border border-orange-200 transition-colors"
         >
           <Circle size={16} /> Ajouter Association
+        </button>
+
+        <div className="w-px h-6 bg-gray-300 mx-1"></div>
+
+        <button 
+          onClick={onSaveProject}
+          className="p-2 bg-gray-50 text-gray-700 border border-gray-300 hover:bg-gray-100 rounded transition-colors"
+          title="Sauvegarder le Projet (.looping)"
+        >
+          <Save size={16} />
+        </button>
+        <button 
+          onClick={onLoadProject}
+          className="p-2 bg-gray-50 text-gray-700 border border-gray-300 hover:bg-gray-100 rounded transition-colors"
+          title="Ouvrir un Projet"
+        >
+          <FolderOpen size={16} />
+        </button>
+
+        <div className="w-px h-6 bg-gray-300 mx-1"></div>
+
+        <button 
+          onClick={undo}
+          disabled={past.length === 0}
+          className={`p-2 border rounded transition-colors ${past.length === 0 ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'}`}
+          title="Annuler (Ctrl+Z)"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"/></svg>
+        </button>
+        <button 
+          onClick={redo}
+          disabled={future.length === 0}
+          className={`p-2 border rounded transition-colors ${future.length === 0 ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100'}`}
+          title="Rétablir (Ctrl+Y)"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 019-9 9 9 0 016 2.3l3 2.7"/></svg>
         </button>
 
         <div className="w-px h-6 bg-gray-300 mx-1"></div>

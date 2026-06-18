@@ -41,24 +41,88 @@ function FlowApp() {
     duplicateSelectedElement,
     entities,
     associations,
-    loadProject
+    loadProject,
+    saveHistory,
+    undo,
+    redo
   } = useStore();
 
   const { fitView } = useReactFlow();
   const [showMLD, setShowMLD] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
+  const handleSaveProject = async () => {
+    try {
+      const data = { nodes, edges, entities, associations };
+      const json = JSON.stringify(data, null, 2);
+      
+      const filePath = await save({
+        filters: [{ name: 'Projet Looping', extensions: ['looping', 'json'] }]
+      });
+
+      if (filePath) {
+        await writeTextFile(filePath, json);
+        alert('Projet sauvegardé avec succès !');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Erreur lors de la sauvegarde du projet.');
+    }
+  };
+
+  const handleLoadProject = async () => {
+    try {
+      const selected = await open({
+        multiple: false,
+        filters: [{ name: 'Projet Looping', extensions: ['looping', 'json'] }]
+      });
+
+      if (selected && typeof selected === 'string') {
+        const contents = await readTextFile(selected);
+        const data = JSON.parse(contents);
+        loadProject(data);
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Erreur lors de l\'ouverture du projet. Le fichier est peut-être corrompu.');
+    }
+  };
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Don't trigger if user is typing in an input
       const target = event.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
         return;
       }
 
-      if ((event.ctrlKey || event.metaKey) && event.key === 'd') {
-        event.preventDefault();
-        duplicateSelectedElement();
+      if (event.ctrlKey || event.metaKey) {
+        switch (event.key.toLowerCase()) {
+          case 'd':
+            event.preventDefault();
+            duplicateSelectedElement();
+            break;
+          case 's':
+            event.preventDefault();
+            handleSaveProject();
+            break;
+          case 'o':
+            event.preventDefault();
+            handleLoadProject();
+            break;
+          case 'z':
+            event.preventDefault();
+            if (event.shiftKey) {
+              redo();
+            } else {
+              undo();
+            }
+            break;
+          case 'y':
+            event.preventDefault();
+            redo();
+            break;
+        }
+        return;
       }
 
       if (event.key === 'Delete' || event.key === 'Backspace') {
@@ -70,11 +134,16 @@ function FlowApp() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedElementId, deleteElement, duplicateSelectedElement]);
+  }, [selectedElementId, deleteElement, duplicateSelectedElement, nodes, edges, entities, associations, undo, redo]);
 
   const onPaneClick = useCallback(() => {
     setSelectedElement(null);
   }, [setSelectedElement]);
+
+  const onNodeDragStop = useCallback(() => {
+    // Save history after a node has been dragged and dropped to its final position
+    saveHistory();
+  }, [saveHistory]);
 
   const handleExportSQL = async (dialect: SqlDialect) => {
     try {
@@ -230,6 +299,8 @@ function FlowApp() {
         onImportSQL={handleImportSQL} 
         onExportDictionary={handleExportDictionary}
         onExportImage={handleExportImage}
+        onSaveProject={handleSaveProject}
+        onLoadProject={handleLoadProject}
         onFitView={() => fitView({ duration: 800 })}
         showMLD={showMLD} 
         setShowMLD={setShowMLD} 
@@ -243,6 +314,7 @@ function FlowApp() {
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
+            onNodeDragStop={onNodeDragStop}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
             connectionMode={ConnectionMode.Loose}
