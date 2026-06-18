@@ -30,15 +30,72 @@ export interface AppState {
   deleteElement: (id: string) => void;
   setSelectedElement: (id: string | null) => void;
   updateEdgeRole: (edgeId: string, roleUpdate: Partial<AssociationRole>) => void;
+  duplicateSelectedElement: () => void;
+  autoLayout: () => void;
   loadProject: (data: any) => void;
-}
+  }
 
-export const useStore = create<AppState>((set, get) => ({
+  export const useStore = create<AppState>((set, get) => ({
   nodes: [],
   edges: [],
   entities: {},
   associations: {},
   selectedElementId: null,
+
+  autoLayout: () => {
+    const { nodes } = get();
+    // Simple grid layout to keep it clean
+    const SPACING_X = 250;
+    const SPACING_Y = 180;
+    const COLUMNS = Math.ceil(Math.sqrt(nodes.length));
+
+    const newNodes = nodes.map((node, index) => {
+      const row = Math.floor(index / COLUMNS);
+      const col = index % COLUMNS;
+      return {
+        ...node,
+        position: {
+          x: col * SPACING_X + 50,
+          y: row * SPACING_Y + 50,
+        },
+      };
+    });
+    set({ nodes: newNodes });
+  },
+
+  duplicateSelectedElement: () => {
+    const { selectedElementId, entities, associations, nodes } = get();
+    if (!selectedElementId) return;
+
+    const node = nodes.find(n => n.id === selectedElementId);
+    if (!node) return;
+
+    const newId = `${node.id}_copy_${Date.now()}`;
+    const newPos = { x: node.position.x + 30, y: node.position.y + 30 };
+
+    if (node.type === 'entityNode') {
+      const entity = entities[node.id];
+      if (!entity) return;
+      const newEntity = { 
+        ...entity, 
+        id: newId, 
+        name: `${entity.name}_copie`,
+        attributes: entity.attributes.map(a => ({ ...a, id: `attr_${Date.now()}_${Math.random()}` }))
+      };
+      get().addEntity(newEntity, newPos);
+    } else if (node.type === 'associationNode') {
+      const assoc = associations[node.id];
+      if (!assoc) return;
+      const newAssoc = { 
+        ...assoc, 
+        id: newId, 
+        name: `${assoc.name}_copie`,
+        roles: [], // Don't copy roles/edges to avoid mess
+        attributes: (assoc.attributes || []).map(a => ({ ...a, id: `attr_${Date.now()}_${Math.random()}` }))
+      };
+      get().addAssociation(newAssoc, newPos);
+    }
+  },
 
   onNodesChange: (changes: NodeChange[]) => {
     set({

@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useRef } from 'react';
-import { ReactFlow, Background, Controls, MiniMap, ConnectionMode, ReactFlowProvider } from '@xyflow/react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { ReactFlow, Background, Controls, MiniMap, ConnectionMode, ReactFlowProvider, useReactFlow } from '@xyflow/react';
 import { useStore } from './store/useStore';
 import { EntityNode } from './components/EntityNode';
 import { AssociationNode } from './components/AssociationNode';
@@ -35,13 +35,41 @@ function FlowApp() {
     onEdgesChange, 
     onConnect,
     setSelectedElement,
+    selectedElementId,
+    deleteElement,
+    duplicateSelectedElement,
     entities,
     associations,
     loadProject
   } = useStore();
 
+  const { fitView } = useReactFlow();
   const [showMLD, setShowMLD] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Don't trigger if user is typing in an input
+      const target = event.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.key === 'd') {
+        event.preventDefault();
+        duplicateSelectedElement();
+      }
+
+      if (event.key === 'Delete' || event.key === 'Backspace') {
+        if (selectedElementId) {
+          deleteElement(selectedElementId);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedElementId, deleteElement, duplicateSelectedElement]);
 
   const onPaneClick = useCallback(() => {
     setSelectedElement(null);
@@ -165,6 +193,7 @@ function FlowApp() {
         onExportSQL={handleExportSQL} 
         onImportSQL={handleImportSQL} 
         onExportDictionary={handleExportDictionary}
+        onFitView={() => fitView({ duration: 800 })}
         showMLD={showMLD} 
         setShowMLD={setShowMLD} 
       />
@@ -185,7 +214,11 @@ function FlowApp() {
           >
             <Background color="#ccc" gap={16} />
             <Controls />
-            <MiniMap />
+            <MiniMap 
+              style={{ height: 120, border: '1px solid #d1d5db', borderRadius: '8px' }}
+              zoomable
+              pannable
+            />
           </ReactFlow>
         </div>
 

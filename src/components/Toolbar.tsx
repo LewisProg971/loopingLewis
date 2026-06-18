@@ -1,5 +1,5 @@
 import React from 'react';
-import { Square, Circle, Database, Code, Upload, Book } from 'lucide-react';
+import { Square, Circle, Database, Code, Upload, Book, Wand2, Maximize } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { Entity, Association, SqlDialect } from '../types';
 
@@ -7,6 +7,7 @@ interface ToolbarProps {
   onExportSQL: (dialect: SqlDialect) => void;
   onImportSQL: () => void;
   onExportDictionary: () => void;
+  onFitView: () => void;
   showMLD: boolean;
   setShowMLD: (show: boolean) => void;
 }
@@ -15,10 +16,11 @@ export const Toolbar = ({
   onExportSQL, 
   onImportSQL, 
   onExportDictionary,
+  onFitView,
   showMLD, 
   setShowMLD 
 }: ToolbarProps) => {
-  const { addEntity, addAssociation } = useStore();
+  const { addEntity, addAssociation, autoLayout } = useStore();
   const [selectedDialect, setSelectedDialect] = React.useState<SqlDialect>('mysql');
 
   const handleAddEntity = () => {
@@ -56,6 +58,23 @@ export const Toolbar = ({
           className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 text-orange-700 hover:bg-orange-100 rounded text-sm font-medium border border-orange-200 transition-colors"
         >
           <Circle size={16} /> Ajouter Association
+        </button>
+
+        <div className="w-px h-6 bg-gray-300 mx-1"></div>
+
+        <button 
+          onClick={autoLayout}
+          className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 text-gray-700 border border-gray-300 hover:bg-gray-100 rounded text-sm font-medium transition-colors"
+          title="Organiser automatiquement"
+        >
+          <Wand2 size={16} /> Organiser
+        </button>
+        <button 
+          onClick={onFitView}
+          className="p-2 bg-gray-50 text-gray-700 border border-gray-300 hover:bg-gray-100 rounded transition-colors"
+          title="Zoomer sur tout"
+        >
+          <Maximize size={16} />
         </button>
       </div>
 
