@@ -97,7 +97,8 @@ const createJoinTable = (assoc: Association, tables: Table[], entities: Record<s
         isForeignKey: true,
         references: {
           table: refTableName,
-          column: pk.name.toLowerCase()
+          column: pk.name.toLowerCase(),
+          onDelete: 'CASCADE'
         },
         notNull: true
       });
@@ -145,7 +146,8 @@ const addForeignKey = (
     isForeignKey: true,
     references: {
       table: targetTableName,
-      column: targetPk.name.toLowerCase()
+      column: targetPk.name.toLowerCase(),
+      onDelete: 'RESTRICT'
     },
     // If cardinality is 1,1 it's not null. If 0,1 it can be null.
     notNull: sourceCardinality === '1,1'

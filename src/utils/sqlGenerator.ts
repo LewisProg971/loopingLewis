@@ -26,7 +26,11 @@ export const generateSQL = (tables: Table[], dialect: SqlDialect = 'mysql'): str
       }
 
       if (col.isForeignKey && col.references) {
-        foreignKeys.push(`  FOREIGN KEY (${col.name}) REFERENCES ${col.references.table}(${col.references.column})`);
+        let fkDef = `  FOREIGN KEY (${col.name}) REFERENCES ${col.references.table}(${col.references.column})`;
+        if (col.references.onDelete) {
+          fkDef += ` ON DELETE ${col.references.onDelete}`;
+        }
+        foreignKeys.push(fkDef);
       }
     });
 
@@ -44,14 +48,26 @@ export const generateSQL = (tables: Table[], dialect: SqlDialect = 'mysql'): str
 };
 
 const mapSqlType = (type: string, dialect: SqlDialect): string => {
-  // Simple mapping, can be extended based on exact dialect needs
+  const normalizedType = type.toUpperCase();
+
   if (dialect === 'postgresql') {
-    if (type === 'INT') return 'INTEGER';
-    if (type.startsWith('VARCHAR')) return type;
+    if (normalizedType === 'INT') return 'INTEGER';
+    if (normalizedType === 'BOOLEAN') return 'BOOLEAN';
+    if (normalizedType === 'DATETIME') return 'TIMESTAMP';
+    if (normalizedType === 'TEXT') return 'TEXT';
+    return normalizedType;
   }
+
   if (dialect === 'sqlite') {
-    if (type === 'INT') return 'INTEGER';
-    if (type === 'BOOLEAN') return 'INTEGER'; // SQLite doesn't have strict boolean
+    if (normalizedType === 'INT') return 'INTEGER';
+    if (normalizedType === 'BOOLEAN') return 'INTEGER'; // 0 or 1
+    if (normalizedType === 'DECIMAL') return 'REAL';
+    if (normalizedType === 'DATE') return 'TEXT'; // ISO8601 strings
+    return normalizedType;
   }
-  return type;
+
+  // MySQL / Default
+  if (normalizedType === 'BOOLEAN') return 'TINYINT(1)';
+  if (normalizedType === 'TEXT') return 'LONGTEXT';
+  return normalizedType;
 };

@@ -10,7 +10,8 @@ import { PropertiesPanel } from './components/PropertiesPanel';
 import { MLDPanel } from './components/MLDPanel';
 import { ValidatorPanel } from './components/ValidatorPanel';
 import { generateMLD } from './utils/mldGenerator';
-import { generateSQL } from './utils/sqlGenerator';
+import { generateSQL, SqlDialect } from './utils/sqlGenerator';
+import { generateDataDictionary } from './utils/dictionaryGenerator';
 import { parseSQL } from './utils/sqlParser';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { writeTextFile, readTextFile } from '@tauri-apps/plugin-fs';
@@ -46,10 +47,10 @@ function FlowApp() {
     setSelectedElement(null);
   }, [setSelectedElement]);
 
-  const handleExportSQL = async () => {
+  const handleExportSQL = async (dialect: SqlDialect) => {
     try {
       const tables = generateMLD(entities, associations);
-      const sql = generateSQL(tables, 'postgresql'); // Defaulting to PG for now
+      const sql = generateSQL(tables, dialect);
       
       const filePath = await save({
         filters: [{
@@ -60,11 +61,32 @@ function FlowApp() {
 
       if (filePath) {
         await writeTextFile(filePath, sql);
-        alert('Script SQL exporté avec succès !');
+        alert(`Script SQL (${dialect.toUpperCase()}) exporté avec succès !`);
       }
     } catch (error) {
       console.error(error);
       alert(`Erreur lors de l'exportation SQL : ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  const handleExportDictionary = async () => {
+    try {
+      const md = generateDataDictionary(entities, associations);
+      
+      const filePath = await save({
+        filters: [{
+          name: 'Dictionnaire Markdown',
+          extensions: ['md']
+        }]
+      });
+
+      if (filePath) {
+        await writeTextFile(filePath, md);
+        alert('Dictionnaire de données exporté avec succès !');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Erreur lors de l\'exportation du dictionnaire.');
     }
   };
 
@@ -115,7 +137,7 @@ function FlowApp() {
               target: role.entityId,
               label: role.cardinality,
               type: 'customEdge',
-              data: { cardinality: role.cardinality }
+              data: { cardinality: role.cardinality, isRelative: role.isRelative }
             });
           });
 
@@ -142,6 +164,7 @@ function FlowApp() {
       <Toolbar 
         onExportSQL={handleExportSQL} 
         onImportSQL={handleImportSQL} 
+        onExportDictionary={handleExportDictionary}
         showMLD={showMLD} 
         setShowMLD={setShowMLD} 
       />

@@ -42,6 +42,7 @@ export interface TableColumn {
   references?: {
     table: string;
     column: string;
+    onDelete?: 'CASCADE' | 'SET NULL' | 'RESTRICT';
   };
   notNull: boolean;
 }

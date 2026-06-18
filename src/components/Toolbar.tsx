@@ -1,17 +1,25 @@
 import React from 'react';
-import { Square, Circle, Database, Code, Upload } from 'lucide-react';
+import { Square, Circle, Database, Code, Upload, Book } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { Entity, Association } from '../types';
+import { Entity, Association, SqlDialect } from '../types';
 
 interface ToolbarProps {
-  onExportSQL: () => void;
+  onExportSQL: (dialect: SqlDialect) => void;
   onImportSQL: () => void;
+  onExportDictionary: () => void;
   showMLD: boolean;
   setShowMLD: (show: boolean) => void;
 }
 
-export const Toolbar = ({ onExportSQL, onImportSQL, showMLD, setShowMLD }: ToolbarProps) => {
+export const Toolbar = ({ 
+  onExportSQL, 
+  onImportSQL, 
+  onExportDictionary,
+  showMLD, 
+  setShowMLD 
+}: ToolbarProps) => {
   const { addEntity, addAssociation } = useStore();
+  const [selectedDialect, setSelectedDialect] = React.useState<SqlDialect>('mysql');
 
   const handleAddEntity = () => {
     const newEntity: Entity = {
@@ -51,7 +59,35 @@ export const Toolbar = ({ onExportSQL, onImportSQL, showMLD, setShowMLD }: Toolb
         </button>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
+        <button 
+          onClick={onExportDictionary}
+          className="flex items-center gap-2 px-3 py-1.5 bg-white text-indigo-700 border border-indigo-200 hover:bg-indigo-50 rounded text-sm font-medium transition-colors"
+          title="Dictionnaire de Données (Markdown)"
+        >
+          <Book size={16} /> Dictionnaire
+        </button>
+
+        <div className="flex items-center gap-1 bg-gray-50 border border-gray-300 rounded p-1">
+          <select 
+            value={selectedDialect}
+            onChange={(e) => setSelectedDialect(e.target.value as SqlDialect)}
+            className="bg-transparent text-xs font-semibold outline-none border-none p-0.5"
+          >
+            <option value="mysql">MySQL</option>
+            <option value="postgresql">PostgreSQL</option>
+            <option value="sqlite">SQLite</option>
+          </select>
+          <button 
+            onClick={() => onExportSQL(selectedDialect)}
+            className="flex items-center gap-1.5 px-2.5 py-1 bg-green-600 text-white hover:bg-green-700 rounded text-xs font-bold shadow-sm transition-colors"
+          >
+            <Code size={14} /> SQL
+          </button>
+        </div>
+
+        <div className="w-px h-6 bg-gray-300 mx-1"></div>
+
         <button 
           onClick={() => setShowMLD(!showMLD)}
           className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium border transition-colors ${
@@ -60,18 +96,12 @@ export const Toolbar = ({ onExportSQL, onImportSQL, showMLD, setShowMLD }: Toolb
         >
           <Database size={16} /> MLD
         </button>
-        <div className="w-px h-6 bg-gray-300"></div>
+        
         <button 
           onClick={onImportSQL}
           className="flex items-center gap-2 px-3 py-1.5 bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 rounded text-sm font-medium transition-colors"
         >
-          <Upload size={16} /> Importer SQL
-        </button>
-        <button 
-          onClick={onExportSQL}
-          className="flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white hover:bg-green-700 rounded text-sm font-medium shadow-sm transition-colors"
-        >
-          <Code size={16} /> Exporter SQL
+          <Upload size={16} />
         </button>
       </div>
     </div>
