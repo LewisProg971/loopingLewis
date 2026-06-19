@@ -1,7 +1,7 @@
 import React from 'react';
 import { Square, Circle, Database, Code, Upload, Book, Wand2, Maximize, Image as ImageIcon, Save, FolderOpen } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { Entity, Association } from '../types';
+import { Entity, Association, UMLClass } from '../types';
 import { SqlDialect } from '../utils/sqlGenerator';
 
 export interface ToolbarProps {
@@ -27,7 +27,18 @@ export const Toolbar = ({
   showMLD, 
   setShowMLD 
 }: ToolbarProps) => {
-  const { addEntity, addAssociation, autoLayout, undo, redo, past, future } = useStore();
+  const { 
+    addEntity, 
+    addAssociation, 
+    addUmlClass,
+    autoLayout, 
+    undo, 
+    redo, 
+    past, 
+    future,
+    diagramMode,
+    setDiagramMode
+  } = useStore();
   const [selectedDialect, setSelectedDialect] = React.useState<SqlDialect>('mysql');
 
   const handleAddEntity = () => {
@@ -51,21 +62,59 @@ export const Toolbar = ({
     addAssociation(newAssoc, { x: Math.random() * 200 + 300, y: Math.random() * 200 + 50 });
   };
 
+  const handleAddUmlClass = () => {
+    const newClass: UMLClass = {
+      id: `uml_${Date.now()}`,
+      name: `Class_${Object.keys(useStore.getState().umlClasses).length + 1}`,
+      attributes: [
+        { id: `attr_${Date.now()}_1`, name: 'id', type: 'INT', isPrimaryKey: true, visibility: '-' }
+      ],
+      methods: []
+    };
+    addUmlClass(newClass, { x: Math.random() * 200 + 50, y: Math.random() * 200 + 50 });
+  };
+
   return (
     <div className="h-14 bg-white border-b border-gray-200 flex items-center px-4 justify-between shadow-sm">
       <div className="flex items-center gap-2">
-        <button 
-          onClick={handleAddEntity}
-          className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded text-sm font-medium border border-blue-200 transition-colors"
-        >
-          <Square size={16} /> Ajouter Entité
-        </button>
-        <button 
-          onClick={handleAddAssociation}
-          className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 text-orange-700 hover:bg-orange-100 rounded text-sm font-medium border border-orange-200 transition-colors"
-        >
-          <Circle size={16} /> Ajouter Association
-        </button>
+        <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 mr-2">
+          <button
+            onClick={() => setDiagramMode('merise')}
+            className={`px-3 py-1 text-xs font-bold rounded shadow-sm transition-all ${diagramMode === 'merise' ? 'bg-white text-blue-700' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            MERISE
+          </button>
+          <button
+            onClick={() => setDiagramMode('uml')}
+            className={`px-3 py-1 text-xs font-bold rounded shadow-sm transition-all ${diagramMode === 'uml' ? 'bg-white text-purple-700' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            UML
+          </button>
+        </div>
+
+        {diagramMode === 'merise' ? (
+          <>
+            <button 
+              onClick={handleAddEntity}
+              className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded text-sm font-medium border border-blue-200 transition-colors"
+            >
+              <Square size={16} /> Ajouter Entité
+            </button>
+            <button 
+              onClick={handleAddAssociation}
+              className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 text-orange-700 hover:bg-orange-100 rounded text-sm font-medium border border-orange-200 transition-colors"
+            >
+              <Circle size={16} /> Ajouter Association
+            </button>
+          </>
+        ) : (
+          <button 
+            onClick={handleAddUmlClass}
+            className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 text-purple-700 hover:bg-purple-100 rounded text-sm font-medium border border-purple-200 transition-colors"
+          >
+            <Square size={16} /> Ajouter Classe
+          </button>
+        )}
 
         <div className="w-px h-6 bg-gray-300 mx-1"></div>
 

@@ -13,55 +13,70 @@ import {
   applyEdgeChanges,
   MarkerType,
 } from '@xyflow/react';
-import { Entity, Association, AssociationRole } from '../types';
+import { Entity, Association, AssociationRole, UMLClass, DiagramMode } from '../types';
 
 export interface AppState {
+  diagramMode: DiagramMode;
+  setDiagramMode: (mode: DiagramMode) => void;
+  
   nodes: Node[];
   edges: Edge[];
   entities: Record<string, Entity>;
   associations: Record<string, Association>;
+  umlClasses: Record<string, UMLClass>;
   selectedElementId: string | null;
+  
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
   onConnect: OnConnect;
+  
   addEntity: (entity: Entity, position: { x: number, y: number }) => void;
   addAssociation: (association: Association, position: { x: number, y: number }) => void;
+  addUmlClass: (umlClass: UMLClass, position: { x: number, y: number }) => void;
+  
   updateEntity: (id: string, entity: Partial<Entity>) => void;
   updateAssociation: (id: string, association: Partial<Association>) => void;
+  updateUmlClass: (id: string, umlClass: Partial<UMLClass>) => void;
+  
   deleteElement: (id: string) => void;
   setSelectedElement: (id: string | null) => void;
-  updateEdgeRole: (edgeId: string, roleUpdate: Partial<AssociationRole>) => void;
+  updateEdgeRole: (edgeId: string, roleUpdate: Partial<AssociationRole> | any) => void;
+  
   duplicateSelectedElement: () => void;
   autoLayout: () => void;
   loadProject: (data: any) => void;
   
   // History
-  past: Pick<AppState, 'nodes' | 'edges' | 'entities' | 'associations'>[];
-  future: Pick<AppState, 'nodes' | 'edges' | 'entities' | 'associations'>[];
+  past: Pick<AppState, 'nodes' | 'edges' | 'entities' | 'associations' | 'umlClasses'>[];
+  future: Pick<AppState, 'nodes' | 'edges' | 'entities' | 'associations' | 'umlClasses'>[];
   saveHistory: () => void;
   undo: () => void;
   redo: () => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
+  diagramMode: 'merise',
+  setDiagramMode: (mode) => set({ diagramMode: mode }),
+
   nodes: [],
   edges: [],
   entities: {},
   associations: {},
+  umlClasses: {},
   selectedElementId: null,
   past: [],
   future: [],
 
   saveHistory: () => {
-    const { nodes, edges, entities, associations, past } = get();
+    const { nodes, edges, entities, associations, umlClasses, past } = get();
     set({
-      past: [...past, { nodes, edges, entities, associations }],
+      past: [...past, { nodes, edges, entities, associations, umlClasses }],
       future: [],
     });
   },
 
   undo: () => {
-    const { past, future, nodes, edges, entities, associations } = get();
+    const { past, future, nodes, edges, entities, associations, umlClasses } = get();
     if (past.length === 0) return;
     
     const previous = past[past.length - 1];
@@ -69,21 +84,21 @@ export const useStore = create<AppState>((set, get) => ({
     
     set({
       past: newPast,
-      future: [...future, { nodes, edges, entities, associations }],
+      future: [...future, { nodes, edges, entities, associations, umlClasses }],
       ...previous,
       selectedElementId: null
     });
   },
 
   redo: () => {
-    const { past, future, nodes, edges, entities, associations } = get();
+    const { past, future, nodes, edges, entities, associations, umlClasses } = get();
     if (future.length === 0) return;
 
     const next = future[future.length - 1];
     const newFuture = future.slice(0, future.length - 1);
 
     set({
-      past: [...past, { nodes, edges, entities, associations }],
+      past: [...past, { nodes, edges, entities, associations, umlClasses }],
       future: newFuture,
       ...next,
       selectedElementId: null
@@ -339,6 +354,33 @@ export const useStore = create<AppState>((set, get) => ({
         }
       }
       return { edges: newEdges };
+    });
+  },
+
+  addUmlClass: (umlClass, position) => {
+    get().saveHistory();
+    const newNode: Node = {
+      id: umlClass.id,
+      type: 'umlClassNode',
+      position,
+      data: { umlClass },
+    };
+    set(state => ({
+      nodes: [...state.nodes, newNode],
+      umlClasses: { ...state.umlClasses, [umlClass.id]: umlClass }
+    }));
+  },
+
+  updateUmlClass: (id, updatedFields) => {
+    get().saveHistory();
+    set(state => {
+      const umlClass = { ...state.umlClasses[id], ...updatedFields };
+      return {
+        umlClasses: { ...state.umlClasses, [id]: umlClass },
+        nodes: state.nodes.map(n => 
+          n.id === id ? { ...n, data: { ...n.data, umlClass } } : n
+        )
+      };
     });
   },
 

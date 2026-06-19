@@ -1,11 +1,29 @@
 export type DataType = 'INT' | 'VARCHAR' | 'DATE' | 'BOOLEAN' | 'DECIMAL' | 'TEXT';
 
+export type Visibility = '+' | '-' | '#';
+export type DiagramMode = 'merise' | 'uml';
+
 export interface Attribute {
   id: string;
   name: string;
   type: DataType;
   isPrimaryKey: boolean;
-  length?: number; // for VARCHAR
+  length?: number;
+  visibility?: Visibility; // Added for UML support
+}
+
+export interface MethodArg {
+  id: string;
+  name: string;
+  type: string;
+}
+
+export interface UMLMethod {
+  id: string;
+  visibility: Visibility;
+  name: string;
+  returnType: string;
+  args: MethodArg[];
 }
 
 export interface Entity {
@@ -14,7 +32,17 @@ export interface Entity {
   attributes: Attribute[];
 }
 
+export interface UMLClass {
+  id: string;
+  name: string;
+  isAbstract?: boolean;
+  attributes: Attribute[];
+  methods: UMLMethod[];
+}
+
 export type Cardinality = '0,1' | '1,1' | '0,n' | '1,n';
+export type UMLMultiplicity = '1' | '0..1' | '*' | '0..*' | '1..*';
+export type UMLLinkType = 'association' | 'inheritance' | 'aggregation' | 'composition';
 
 export interface AssociationRole {
   entityId: string;

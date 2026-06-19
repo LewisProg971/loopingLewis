@@ -5,6 +5,7 @@ import { EntityNode } from './components/EntityNode';
 import { AssociationNode } from './components/AssociationNode';
 import { CustomEdge } from './components/CustomEdge';
 import { InheritanceEdge } from './components/InheritanceEdge';
+import { UmlClassNode } from './components/UmlClassNode';
 import { Toolbar } from './components/Toolbar';
 import { PropertiesPanel } from './components/PropertiesPanel';
 import { MLDPanel } from './components/MLDPanel';
@@ -21,6 +22,7 @@ import { getNodesBounds, getViewportForBounds } from '@xyflow/react';
 const nodeTypes: NodeTypes = {
   entityNode: EntityNode,
   associationNode: AssociationNode,
+  umlClassNode: UmlClassNode as any, // Bypass TS constraint for custom node for now
 };
 
 const edgeTypes = {
